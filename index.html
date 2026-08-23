@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FreeAPI Radar · 免费 API 与 AI 大模型额度雷达</title>
+<meta name="description" content="实时从 GitHub 与全网抓取免费 API、curl 示例，以及各大厂商免费 AI 大模型额度情报">
+<style>
+:root{
+  --bg:#0b0f1a; --bg2:#111827; --card:#151c2c; --card2:#1a2338;
+  --border:#263148; --text:#e5ecf8; --muted:#8fa3c4;
+  --accent:#7c5cff; --accent2:#22d3ee; --ok:#34d399; --warn:#fbbf24; --err:#f87171;
+  --radius:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:"Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  background:
+    radial-gradient(1200px 500px at 80% -10%, rgba(124,92,255,.18), transparent 60%),
+    radial-gradient(900px 400px at 0% 0%, rgba(34,211,238,.12), transparent 55%),
+    var(--bg);
+  color:var(--text); min-height:100vh;
+}
+a{color:var(--accent2);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* ---------- header ---------- */
+header{
+  position:sticky;top:0;z-index:50;
+  backdrop-filter:blur(14px);
+  background:rgba(11,15,26,.82);
+  border-bottom:1px solid var(--border);
+  padding:14px 22px;
+  display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+}
+.brand{display:flex;align-items:center;gap:12px;margin-right:auto}
+.logo{
+  width:40px;height:40px;border-radius:12px;flex:none;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  display:grid;place-items:center;font-size:20px;
+  box-shadow:0 4px 18px rgba(124,92,255,.45);
+}
+.brand h1{font-size:19px;font-weight:700;letter-spacing:.3px}
+.brand small{display:block;color:var(--muted);font-weight:400;font-size:12px;margin-top:2px}
+.ctrl{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.ctrl label{font-size:12px;color:var(--muted)}
+select,button.btn{
+  background:var(--card2);color:var(--text);border:1px solid var(--border);
+  border-radius:10px;padding:8px 12px;font-size:13px;cursor:pointer;outline:none;
+}
+select:hover,button.btn:hover{border-color:var(--accent)}
+button.btn.primary{
+  background:linear-gradient(135deg,var(--accent),#5b8cff);
+  border:none;font-weight:600;box-shadow:0 4px 14px rgba(124,92,255,.4);
+}
+button.btn:disabled{opacity:.5;cursor:not-allowed}
+.status{font-size:12px;color:var(--muted)}
+.status b{color:var(--ok)}
+.pulse{
+  display:inline-block;width:8px;height:8px;border-radius:50%;
+  background:var(--ok);margin-right:6px;animation:pulse 1.6s infinite;
+}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(52,211,153,.5)}70%{box-shadow:0 0 0 8px rgba(52,211,153,0)}100%{box-shadow:0 0 0 0 rgba(52,211,153,0)}}
+
+/* ---------- tabs ---------- */
+nav.tabs{display:flex;gap:8px;padding:16px 22px 0;flex-wrap:wrap}
+nav.tabs button{
+  background:var(--card);border:1px solid var(--border);color:var(--muted);
+  padding:10px 18px;border-radius:12px 12px 0 0;cursor:pointer;font-size:14px;
+}
+nav.tabs button.active{
+  color:var(--text);background:var(--card2);border-bottom-color:var(--card2);
+  border-top:2px solid var(--accent);font-weight:600;
+}
+main{padding:0 22px 40px}
+
+/* ---------- banner ---------- */
+.banner{
+  margin-top:16px;padding:12px 16px;border-radius:var(--radius);font-size:13px;
+  border:1px solid var(--border);background:var(--card);color:var(--muted);
+  display:none;
+}
+.banner.show{display:block}
+.banner.err{border-color:rgba(248,113,113,.4);color:var(--err)}
+
+/* ---------- toolbar ---------- */
+.toolbar{display:flex;gap:12px;margin:18px 0 14px;flex-wrap:wrap;align-items:center}
+.search{
+  flex:1;min-width:220px;display:flex;align-items:center;gap:8px;
+  background:var(--card);border:1px solid var(--border);border-radius:12px;padding:0 12px;
+}
+.search input{
+  flex:1;background:none;border:none;color:var(--text);padding:11px 0;font-size:14px;outline:none;
+}
+.chip{
+  border:1px solid var(--border);background:var(--card);color:var(--muted);
+  padding:7px 13px;border-radius:999px;font-size:12px;cursor:pointer;white-space:nowrap;
+}
+.chip.active{background:linear-gradient(135deg,rgba(124,92,255,.25),rgba(34,211,238,.18));color:var(--text);border-color:var(--accent)}
+.count{font-size:12px;color:var(--muted)}
+
+/* ---------- cards ---------- */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px}
+.card{
+  background:linear-gradient(180deg,var(--card),var(--card2));
+  border:1px solid var(--border);border-radius:var(--radius);padding:16px;
+  display:flex;flex-direction:column;gap:10px;
+  transition:transform .15s,border-color .15s;
+}
+.card:hover{transform:translateY(-2px);border-color:rgba(124,92,255,.55)}
+.card h3{font-size:15px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.card h3 .name{color:var(--text)}
+.tag{
+  font-size:10px;padding:2px 8px;border-radius:999px;font-weight:600;letter-spacing:.4px;
+  background:rgba(124,92,255,.18);color:#b9a6ff;border:1px solid rgba(124,92,255,.35);
+}
+.tag.ok{background:rgba(52,211,153,.15);color:var(--ok);border-color:rgba(52,211,153,.35)}
+.tag.warn{background:rgba(251,191,36,.14);color:var(--warn);border-color:rgba(251,191,36,.35)}
+.tag.info{background:rgba(34,211,238,.13);color:var(--accent2);border-color:rgba(34,211,238,.35)}
+.card p.desc{font-size:13px;color:var(--muted);line-height:1.55;flex:1}
+.card .meta{font-size:12px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.card .meta .star{color:var(--warn)}
+pre.curl{
+  position:relative;background:#0a0e18;border:1px solid var(--border);border-radius:10px;
+  padding:12px 12px;font-size:12px;line-height:1.5;overflow-x:auto;
+  font-family:"Cascadia Code",Consolas,"JetBrains Mono",monospace;color:#c9e3ff;
+  white-space:pre;
+}
+pre.curl::before{
+  content:"curl";position:absolute;top:-9px;left:12px;font-size:10px;
+  background:var(--accent);color:#fff;padding:1px 8px;border-radius:6px;letter-spacing:1px;
+}
+.copy{
+  position:absolute;top:6px;right:6px;font-size:11px;padding:3px 10px;border-radius:8px;
+  background:var(--card2);border:1px solid var(--border);color:var(--muted);cursor:pointer;
+}
+.copy:hover{color:var(--text);border-color:var(--accent)}
+.actions{display:flex;gap:8px;flex-wrap:wrap;font-size:12px}
+.actions a{
+  color:var(--accent2);border:1px solid rgba(34,211,238,.3);padding:5px 12px;border-radius:8px;
+}
+.actions a:hover{background:rgba(34,211,238,.1);text-decoration:none}
+.section-title{
+  margin:26px 0 12px;font-size:15px;color:var(--text);
+  display:flex;align-items:center;gap:10px;
+}
+.section-title .line{flex:1;height:1px;background:var(--border)}
+.section-title .sub{font-size:12px;color:var(--muted);font-weight:400}
+
+/* ---------- pagination ---------- */
+.pager{display:flex;gap:8px;justify-content:center;margin-top:20px;flex-wrap:wrap}
+.pager button{
+  background:var(--card);border:1px solid var(--border);color:var(--muted);
+  min-width:36px;padding:7px 11px;border-radius:9px;cursor:pointer;font-size:13px;
+}
+.pager button.cur{background:var(--accent);color:#fff;border-color:var(--accent)}
+.pager button:disabled{opacity:.35;cursor:not-allowed}
+
+/* ---------- loader / empty ---------- */
+.loader{display:flex;flex-direction:column;align-items:center;gap:14px;padding:60px 0;color:var(--muted)}
+.spinner{
+  width:42px;height:42px;border-radius:50%;
+  border:3px solid var(--border);border-top-color:var(--accent);
+  animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{padding:50px 0;text-align:center;color:var(--muted);font-size:14px}
+
+/* ---------- toast ---------- */
+#toast{
+  position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(80px);
+  background:var(--card2);border:1px solid var(--accent);color:var(--text);
+  padding:11px 22px;border-radius:12px;font-size:13px;z-index:100;
+  transition:transform .25s;box-shadow:0 8px 30px rgba(0,0,0,.5);
+}
+#toast.show{transform:translateX(-50%) translateY(0)}
+
+footer{
+  border-top:1px solid var(--border);padding:18px 22px;text-align:center;
+  color:var(--muted);font-size:12px;line-height:1.8;
+}
+@media (max-width:640px){
+  header{padding:12px 14px}
+  main,nav.tabs{padding-left:14px;padding-right:14px}
+  .grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="logo">📡</div>
+    <div>
+      <h1>FreeAPI Radar <span style="font-size:11px;color:var(--accent2)">实时雷达</span></h1>
+      <small>免费 API · curl 示例 · AI 大模型免费额度情报 —— 数据实时抓取自 GitHub / 公开清单</small>
+    </div>
+  </div>
+  <div class="ctrl">
+    <label>自动刷新
+      <select id="intervalSel">
+        <option value="0">关闭</option>
+        <option value="5">5 分钟</option>
+        <option value="10" selected>10 分钟</option>
+        <option value="30">30 分钟</option>
+        <option value="60">60 分钟</option>
+      </select>
+    </label>
+    <span class="status" id="countdown"></span>
+    <button class="btn primary" id="refreshBtn">⟳ 立即抓取</button>
+    <span class="status"><span class="pulse"></span><span id="updated">等待首次抓取…</span></span>
+  </div>
+</header>
+
+<nav class="tabs">
+  <button data-tab="apis" class="active">🌐 免费 API 总库 <span id="apisCount" class="tag ok">0</span></button>
+  <button data-tab="ai">🤖 免费 AI 大模型额度 <span id="aiCount" class="tag info">0</span></button>
+  <button data-tab="github">🐙 GitHub 实时抓取 <span id="ghCount" class="tag">0</span></button>
+</nav>
+
+<main>
+  <div class="banner" id="banner"></div>
+
+  <!-- ============ Tab 1: 免费 API 总库 ============ -->
+  <section id="tab-apis">
+    <div class="toolbar">
+      <div class="search">🔍 <input id="apiSearch" placeholder="搜索 API 名称 / 描述，例如 weather、cat、翻译…"></div>
+      <button class="chip active" data-filter="all">全部</button>
+      <button class="chip" data-filter="noauth">无需鉴权</button>
+      <button class="chip" data-filter="key">需要 Key</button>
+      <span class="count" id="apiMeta"></span>
+    </div>
+    <div class="grid" id="apiGrid"></div>
+    <div class="pager" id="apiPager"></div>
+  </section>
+
+  <!-- ============ Tab 2: 免费 AI 大模型额度 ============ -->
+  <section id="tab-ai" hidden>
+    <div class="section-title">🏭 各厂商免费额度情报 <span class="sub">人工核验 + 定期复查（点击卡片链接直达官网领额度）</span><span class="line"></span></div>
+    <div class="toolbar">
+      <div class="search">🔍 <input id="aiSearch" placeholder="搜索厂商，例如 Google、Groq、智谱…"></div>
+      <button class="chip active" data-aifilter="all">全部</button>
+      <button class="chip" data-aifilter="intl">国际厂商</button>
+      <button class="chip" data-aifilter="cn">国内厂商</button>
+      <span class="count" id="aiMeta"></span>
+    </div>
+    <div class="grid" id="aiGrid"></div>
+    <div class="section-title">📜 开源社区维护的「免费 LLM API」清单 <span class="sub">实时抓取自 GitHub</span><span class="line"></span></div>
+    <div class="grid" id="aiListGrid"></div>
+  </section>
+
+  <!-- ============ Tab 3: GitHub 实时抓取 ============ -->
+  <section id="tab-github" hidden>
+    <div class="section-title">🔥 最近更新的「免费 API」相关仓库 <span class="sub">GitHub Search API 实时结果</span><span class="line"></span></div>
+    <div class="grid" id="ghRecentGrid"></div>
+    <div class="section-title">⭐ 高星「免费 API / 免费 AI」仓库 <span class="sub">按 Star 排序</span><span class="line"></span></div>
+    <div class="grid" id="ghStarGrid"></div>
+  </section>
+</main>
+
+<footer>
+  FreeAPI Radar · 数据来源：<a href="https://github.com/public-apis/public-apis" target="_blank">public-apis</a> ·
+  <a href="https://github.com/cheahjs/free-llm-api-resources" target="_blank">free-llm-api-resources</a> ·
+  GitHub Search API（实时）<br>
+  纯前端实现，无后端服务器；curl 中的 <code>YOUR_API_KEY</code> 请替换为你自己的密钥。额度信息以各官网为准。
+</footer>
+
+<div id="toast">已复制 ✔</div>
+
+<script>
+/* =====================================================================
+ * FreeAPI Radar — 实时抓取免费 API / curl / AI 免费额度
+ * 数据源：
+ *   1. https://raw.githubusercontent.com/public-apis/public-apis (1400+ 免费 API)
+ *   2. GitHub Search API（实时仓库抓取）
+ *   3. cheahjs/free-llm-api-resources（免费 LLM 清单）
+ *   4. 人工核验的厂商免费额度情报（内置数据 + 定期复查链接）
+ * ===================================================================== */
+
+const $  = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+
+/* ---------------- 工具 ---------------- */
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+async function fetchJSON(url){
+  const r = await fetch(url, {headers:{'Accept':'application/vnd.github+json'}});
+  if(!r.ok) throw new Error(`${r.status} ${url}`);
+  return r.json();
+}
+/* 多源抓取：raw.githubusercontent 在部分地区被阻断，自动切换 jsDelivr CDN */
+const FILE_SOURCES = [
+  (repo, branch, path) => `https://cdn.jsdelivr.net/gh/${repo}@${branch}/${path}`,
+  (repo, branch, path) => `https://fastly.jsdelivr.net/gh/${repo}@${branch}/${path}`,
+  (repo, branch, path) => `https://raw.githubusercontent.com/${repo}/${branch}/${path}`,
+];
+async function fetchRepoFile(repo, branch, path){
+  let lastErr;
+  for(const mk of FILE_SOURCES){
+    try{
+      const r = await fetch(mk(repo, branch, path));
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+      return await r.text();
+    }catch(e){ lastErr = e; }
+  }
+  throw lastErr || new Error('所有数据源均不可达');
+}
+/* localStorage 缓存（抓取失败时回退展示，避免空白） */
+function cacheGet(k, ttlMs){
+  try{ const o = JSON.parse(localStorage.getItem(k)); if(o && Date.now()-o.t < ttlMs) return o.v; }catch(e){}
+  return null;
+}
+function cacheSet(k, v){
+  try{ localStorage.setItem(k, JSON.stringify({t:Date.now(), v})); }catch(e){}
+}
+function toast(msg){
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._h); t._h = setTimeout(()=>t.classList.remove('show'), 1600);
+}
+function timeAgo(iso){
+  const s = (Date.now() - new Date(iso)) / 1000;
+  if(s < 3600)   return Math.max(1, s/60|0) + ' 分钟前';
+  if(s < 86400)  return (s/3600|0) + ' 小时前';
+  return (s/86400|0) + ' 天前';
+}
+function banner(msg, isErr){
+  const b = $('#banner');
+  if(!msg){ b.className='banner'; b.textContent=''; return; }
+  b.textContent = msg; b.className = 'banner show' + (isErr ? ' err' : '');
+}
+
+/* 复制按钮（事件委托） */
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.copy');
+  if(!btn) return;
+  const text = btn.parentElement.textContent.replace(/^curl\s*$/,'').replace(/复制$/,'').trim();
+  navigator.clipboard.writeText(btn.dataset.cmd || text)
+    .then(()=>toast('curl 已复制到剪贴板 ✔'))
+    .catch(()=>toast('复制失败，请手动选择复制'));
+});
+
+/* ---------------- Tab 切换 ---------------- */
+$$('nav.tabs button').forEach(b => b.addEventListener('click', () => {
+  $$('nav.tabs button').forEach(x => x.classList.toggle('active', x === b));
+  ['apis','ai','github'].forEach(t => $('#tab-' + t).hidden = (t !== b.dataset.tab));
+}));
+
+/* =====================================================================
+ * 一、免费 API 总库（public-apis 实时抓取 + 内置兜底数据）
+ * ===================================================================== */
+const FALLBACK_APIS = [
+  {cat:'天气', name:'Open-Meteo', desc:'免费无 Key 天气预报 API，全球覆盖', auth:'No', link:'https://open-meteo.com/'},
+  {cat:'天气', name:'wttr.in', desc:'终端友好的天气服务', auth:'No', link:'https://wttr.in/'},
+  {cat:'动物', name:'The Cat API', desc:'猫咪图片', auth:'apiKey', link:'https://thecatapi.com/'},
+  {cat:'动物', name:'Dog CEO', desc:'狗狗图片', auth:'No', link:'https://dog.ceo/dog-api/'},
+  {cat:'金融', name:'Frankfurter', desc:'汇率（ECB 数据），无需 Key', auth:'No', link:'https://www.frankfurter.app/'},
+  {cat:'金融', name:'CoinGecko', desc:'加密货币行情', auth:'No', link:'https://www.coingecko.com/en/api'},
+  {cat:'地理', name:'Nominatim', desc:'OpenStreetMap 地理编码', auth:'No', link:'https://nominatim.org/'},
+  {cat:'翻译', name:'MyMemory', desc:'机器翻译记忆库', auth:'No', link:'https://mymemory.translated.net/doc/'},
+  {cat:'书籍', name:'Open Library', desc:'开放图书数据', auth:'No', link:'https://openlibrary.org/developers/api'},
+  {cat:'政府', name:'data.gov', desc:'美国政府开放数据', auth:'No', link:'https://api.data.gov/'},
+];
+
+let API_DATA = [];          // 全量
+let apiPage = 1;
+const PAGE_SIZE = 60;
+let apiFilter = 'all';
+
+function curlForApi(a){
+  const auth = (a.auth || 'No').toLowerCase();
+  const url = /^https?:/.test(a.link) ? a.link : 'https://' + a.link;
+  if(auth.includes('oauth'))
+    return `curl -s -H "Authorization: Bearer YOUR_OAUTH_TOKEN" \\\n  -H "Accept: application/json" \\\n  "${url}"`;
+  if(auth.includes('apikey') || auth.includes('mAuth'))
+    return `curl -s -H "Authorization: Bearer YOUR_API_KEY" \\\n  -H "Accept: application/json" \\\n  "${url}"`;
+  return `curl -s -H "Accept: application/json" \\\n  "${url}"`;
+}
+
+function parsePublicApis(md){
+  const out = [];
+  let cat = '未分类';
+  for(const line of md.split('\n')){
+    const h = line.match(/^#{2,4}\s+(.+)/);
+    if(h){ cat = h[1].trim(); continue; }
+    const m = line.match(/^\|\s*\[([^\]]+)\]\(([^)\s]+)\)\s*\|([^|]*)\|([^|]*)\|([^|]*)\|([^|]*)\|/);
+    if(m){
+      out.push({
+        cat: esc(cat),
+        name: esc(m[1].trim()),
+        link: m[2].trim(),
+        desc: esc(m[3].replace(/\[([^\]]*)\]\([^)]*\)/g,'$1').trim()),
+        auth: m[4].trim() || 'No',
+        https: m[5].trim(),
+        cors: m[6].trim(),
+      });
+    }
+  }
+  return out;
+}
+
+async function loadPublicApis(){
+  const cached = cacheGet('far_apis', 7*24*3600e3);
+  try{
+    const md = await fetchRepoFile('public-apis/public-apis', 'master', 'README.md');
+    API_DATA = parsePublicApis(md);
+    if(API_DATA.length < 50) throw new Error('解析结果过少');
+    cacheSet('far_apis', API_DATA);
+    banner(`✔ 已从 GitHub（CDN 镜像）实时抓取 public-apis 清单：${API_DATA.length} 个免费 API`);
+  }catch(e){
+    if(cached && cached.length){
+      API_DATA = cached;
+      banner('⚠ 在线抓取失败，已加载 7 天内的本地缓存：' + e.message, true);
+    }else{
+      API_DATA = FALLBACK_APIS.map(a => ({...a, https:'Yes', cors:'Unknown'}));
+      banner('⚠ 所有在线数据源暂不可达，当前展示内置兜底数据：' + e.message, true);
+    }
+  }
+  $('#apisCount').textContent = API_DATA.length;
+  renderApis();
+}
+
+function renderApis(){
+  const q = $('#apiSearch').value.trim().toLowerCase();
+  let list = API_DATA.filter(a =>
+    (apiFilter === 'all') ||
+    (apiFilter === 'noauth' && a.auth === 'No') ||
+    (apiFilter === 'key' && a.auth !== 'No')
+  );
+  if(q) list = list.filter(a => (a.name + a.desc + a.cat).toLowerCase().includes(q));
+
+  const pages = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
+  apiPage = Math.min(apiPage, pages);
+  const slice = list.slice((apiPage-1)*PAGE_SIZE, apiPage*PAGE_SIZE);
+
+  $('#apiMeta').textContent = `共 ${list.length} 个 API · 第 ${apiPage}/${pages} 页`;
+  $('#apisCount').textContent = list.length;
+
+  $('#apiGrid').innerHTML = slice.length ? slice.map(a => `
+    <div class="card">
+      <h3><span class="name">${esc(a.name)}</span>
+        <span class="tag">${esc(a.cat)}</span>
+        ${a.auth === 'No' ? '<span class="tag ok">免鉴权</span>' : `<span class="tag warn">${esc(a.auth)}</span>`}
+        ${a.cors === 'Yes' ? '<span class="tag info">CORS</span>' : ''}
+      </h3>
+      <p class="desc">${a.desc || '（无描述）'}</p>
+      <pre class="curl"><button class="copy" data-cmd="${esc(curlForApi(a))}">复制</button>${esc(curlForApi(a))}</pre>
+      <div class="actions"><a href="${esc(a.link)}" target="_blank" rel="noopener">↗ 打开文档 / 官网</a></div>
+    </div>`).join('') : '<div class="empty">没有匹配的 API，换个关键词试试～</div>';
+
+  // 分页
+  const pager = $('#apiPager');
+  const btns = [];
+  const add = (label, page, dis, cur) => btns.push(`<button ${dis?'disabled':''} data-page="${page}" class="${cur?'cur':''}">${label}</button>`);
+  add('‹', apiPage-1, apiPage===1, false);
+  const start = Math.max(1, Math.min(apiPage-2, pages-4));
+  for(let p = start; p <= Math.min(pages, start+4); p++) add(p, p, false, p===apiPage);
+  add('›', apiPage+1, apiPage===pages, false);
+  pager.innerHTML = btns.join('');
+  pager.querySelectorAll('button[data-page]').forEach(b =>
+    b.addEventListener('click', ()=>{ apiPage = +b.dataset.page; renderApis(); window.scrollTo({top:0}); }));
+}
+$('#apiSearch').addEventListener('input', ()=>{ apiPage = 1; renderApis(); });
+$$('.chip[data-filter]').forEach(c => c.addEventListener('click', ()=>{
+  $$('.chip[data-filter]').forEach(x => x.classList.toggle('active', x===c));
+  apiFilter = c.dataset.filter; apiPage = 1; renderApis();
+}));
+
+/* =====================================================================
+ * 二、免费 AI 大模型额度（内置核验情报 + 社区清单实时抓取）
+ * ===================================================================== */
+const AI_PROVIDERS = [
+  {name:'Google AI Studio (Gemini)', region:'intl', quota:'免费层：Gemini Flash 每分钟 15 次 / 每天 1500 次（网页试用完全免费）', link:'https://aistudio.google.com/',
+   desc:'Google 官方 AI Studio，注册即送免费 API Key，Flash 系列模型可白嫖。',
+   curl:`curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=YOUR_API_KEY" \\\n  -H "Content-Type: application/json" -X POST \\\n  -d '{"contents":[{"parts":[{"text":"Hello"}]}]}'`},
+  {name:'Groq', region:'intl', quota:'免费层：每日上万次请求，Llama 3.3 70B 等极速推理', link:'https://console.groq.com/',
+   desc:'业界最快推理速度，Llama / Mixtral / Gemma 全家桶免费额度拉满。',
+   curl:`curl https://api.groq.com/openai/v1/chat/completions \\\n  -H "Authorization: Bearer $GROQ_API_KEY" -H "Content-Type: application/json" \\\n  -d '{"model":"llama-3.3-70b-versatile","messages":[{"role":"user","content":"Hello"}]}'`},
+  {name:'OpenRouter (:free 模型)', region:'intl', quota:'大量带 “:free” 后缀的模型完全免费（DeepSeek R1、Qwen、Llama 等）', link:'https://openrouter.ai/models?max_price=0',
+   desc:'模型聚合平台，免费档每日 50 次以上（+10 美元余额后更多），一个 Key 通吃全家的免费模型。',
+   curl:`curl https://openrouter.ai/api/v1/chat/completions \\\n  -H "Authorization: Bearer $OPENROUTER_API_KEY" -H "Content-Type: application/json" \\\n  -d '{"model":"deepseek/deepseek-r1:free","messages":[{"role":"user","content":"Hello"}]}'`},
+  {name:'GitHub Models', region:'intl', quota:'免费试用：GPT-4o / Gemini / Llama / DeepSeek 等主流模型', link:'https://github.com/marketplace/models',
+   desc:'GitHub 官方模型市场，个人账号免费调用主流闭源模型（有速率限制）。',
+   curl:`curl https://models.github.ai/inference/chat/completions \\\n  -H "Authorization: Bearer $GITHUB_TOKEN" -H "Content-Type: application/json" \\\n  -d '{"model":"openai/gpt-4o-mini","messages":[{"role":"user","content":"Hello"}]}'`},
+  {name:'Cloudflare Workers AI', region:'intl', quota:'每日 10,000 Neurons 免费额度', link:'https://developers.cloudflare.com/workers-ai/',
+   desc:'边缘推理平台，Llama / Qwen / Whisper 等模型每天免费神经元额度。',
+   curl:`curl https://api.cloudflare.com/client/v4/accounts/YOUR_ACCOUNT_ID/ai/run/@cf/meta/llama-3.1-8b-instruct \\\n  -H "Authorization: Bearer YOUR_API_TOKEN" \\\n  -d '{"messages":[{"role":"user","content":"Hello"}]}'`},
+  {name:'Mistral La Plateforme', region:'intl', quota:'免费实验层：每月 1B tokens（需手机验证）', link:'https://console.mistral.ai/',
+   desc:'法国 Mistral 官方平台，免费层每月海量 token， europilot 实验计划更慷慨。',
+   curl:`curl https://api.mistral.ai/v1/chat/completions \\\n  -H "Authorization: Bearer $MISTRAL_API_KEY" -H "Content-Type: application/json" \\\n  -d '{"model":"mistral-small-latest","messages":[{"role":"user","content":"Hello"}]}'`},
+  {name:'Cerebras Inference', region:'intl', quota:'免费层：每日 1M tokens，超高速 Llama 推理', link:'https://cloud.cerebras.ai/',
+   desc:'Wafer 级引擎，每秒上千 token 的 Llama 3.1 推理，免费额度日常够用。',
+   curl:`curl https://api.cerebras.ai/v1/chat/completions \\\n  -H "Authorization: Bearer $CEREBRAS_API_KEY" -H "Content-Type: application/json" \\\n  -d '{"model":"llama-3.3-70b","messages":[{"role":"user","content":"Hello"}]}'`},
+  {name:'SambaNova Cloud', region:'intl', quota:'免费层：超高速 405B 级模型推理', link:'https://cloud.sambanova.ai/',
+   desc:'RISC-V 定制芯片，Llama 405B 免费快速调用。',
+   curl:`curl https://api.sambanova.ai/v1/chat/completions \\\n  -H "Authorization: Bearer $SAMBANOVA_API_KEY" -H "Content-Type: application/json" \\\n  -d '{"model":"Meta-Llama-3.1-405B-Instruct","messages":[{"role":"user","content":"Hello"}]}'`},
+  {name:'NVIDIA NIM (build.nvidia.com)', region:'intl', quota:'注册送 1000 积分，可调用数百个开源模型', link:'https://build.nvidia.com/',
+   desc:'英伟达模型乐园，DeepSeek-R1 / Llama / Qwen 全都有，还经常发免费积分。',
+   curl:`curl https://integrate.api.nvidia.com/v1/chat/completions \\\n  -H "Authorization: Bearer $NVIDIA_API_KEY" -H "Content-Type: application/json" \\\n  -d '{"model":"deepseek-ai/deepseek-r1","messages":[{"role":"user","content":"Hello"}]}'`},
+  {name:'HuggingFace Inference Providers', region:'intl', quota:'每月少量免费额度，可直连多家厂商', link:'https://huggingface.co/docs/inference-providers',
+   desc:'HF 路由网关统一 OpenAI 兼容接口，免费额度可体验各家开源模型。',
+   curl:`curl https://router.huggingface.co/v1/chat/completions \\\n  -H "Authorization: Bearer $HF_TOKEN" -H "Content-Type: application/json" \\\n  -d '{"model":"meta-llama/Llama-3.1-8B-Instruct","messages":[{"role":"user","content":"Hello"}]}'`},
+  {name:'Cohere', region:'intl', quota:'Trial Key 免费额度：每分钟 20 次，每月 1000 次调用', link:'https://dashboard.cohere.com/api-keys',
+   desc:'Command R 系列对话/重排/嵌入全家桶，试用 Key 长期免费。',
+   curl:`curl https://api.cohere.com/v2/chat \\\n  -H "Authorization: Bearer $COHERE_API_KEY" -H "Content-Type: application/json" \\\n  -d '{"model":"command-r-plus-08-2024","messages":[{"role":"user","content":"Hello"}]}'`},
+  {name:'智谱 AI (GLM)', region:'cn', quota:'glm-4-flash 等模型完全免费，不限量', link:'https://open.bigmodel.cn/',
+   desc:'国内最良心：GLM-4-Flash 永久免费不限量，新用户另有 2000 万 token 资源包。',
+   curl:`curl https://open.bigmodel.cn/api/paas/v4/chat/completions \\\n  -H "Authorization: Bearer $ZHIPU_API_KEY" -H "Content-Type: application/json" \\\n  -d '{"model":"glm-4-flash","messages":[{"role":"user","content":"你好"}]}'`},
+  {name:'阿里云百炼 (DashScope / 通义千问)', region:'cn', quota:'新用户每位模型 100 万 token 免费额度，Qwen-Turbo 长期免费', link:'https://bailian.console.aliyun.com/',
+   desc:'通义千问全系模型，Qwen-Turbo / Qwen-Long 有长期免费档。',
+   curl:`curl https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions \\\n  -H "Authorization: Bearer $DASHSCOPE_API_KEY" -H "Content-Type: application/json" \\\n  -d '{"model":"qwen-turbo","messages":[{"role":"user","content":"你好"}]}'`},
+  {name:'百度千帆 (文心 ERNIE)', region:'cn', quota:'ERNIE Speed / Lite / Tiny 完全免费', link:'https://qianfan.baidubce.com/',
+   desc:'文心系列轻量模型永久免费，X1 等旗舰模型赠送额度。',
+   curl:`curl https://qianfan.baidubce.com/v2/chat/completions \\\n  -H "Authorization: Bearer $QIANFAN_API_KEY" -H "Content-Type: application/json" \\\n  -d '{"model":"ernie-speed-128k","messages":[{"role":"user","content":"你好"}]}'`},
+  {name:'SiliconFlow 硅基流动', region:'cn', quota:'Qwen2.5-7B 等小模型免费，新用户送 14 元额度', link:'https://siliconflow.cn/',
+   desc:'国内模型聚合平台，多个开源小模型 0 元，DeepSeek 低价。',
+   curl:`curl https://api.siliconflow.cn/v1/chat/completions \\\n  -H "Authorization: Bearer $SF_API_KEY" -H "Content-Type: application/json" \\\n  -d '{"model":"Qwen/Qwen2.5-7B-Instruct","messages":[{"role":"user","content":"你好"}]}'`},
+  {name:'讯飞星火 Spark', region:'cn', quota:'Spark Lite 完全免费', link:'https://xinghuo.xfyun.cn/sparkapi',
+   desc:'讯飞开放平台，Lite 版永久免费，适合轻量场景。',
+   curl:`# 讯飞使用 WebSocket/WebAPI 签名调用，详见官网文档\n# curl https://spark-api-open.xf-yun.com/v1/chat/completions \\\n#   -H "Authorization: Bearer $SPARK_API_KEY" \\\n#   -d '{"model":"lite","messages":[{"role":"user","content":"你好"}]}'`},
+  {name:'Moonshot Kimi', region:'cn', quota:'新用户 15 元免费额度', link:'https://platform.moonshot.cn/',
+   desc:'Kimi 大模型开放平台，长上下文场景强者。',
+   curl:`curl https://api.moonshot.cn/v1/chat/completions \\\n  -H "Authorization: Bearer $MOONSHOT_API_KEY" -H "Content-Type: application/json" \\\n  -d '{"model":"kimi-k2-0711-preview","messages":[{"role":"user","content":"你好"}]}'`},
+  {name:'DeepSeek 深度求索', region:'cn', quota:'新用户赠送额度（用完极低价）', link:'https://platform.deepseek.com/',
+   desc:'国产性价比之王，V3 / R1 旗舰模型 API 价格极低。',
+   curl:`curl https://api.deepseek.com/chat/completions \\\n  -H "Authorization: Bearer $DEEPSEEK_API_KEY" -H "Content-Type: application/json" \\\n  -d '{"model":"deepseek-chat","messages":[{"role":"user","content":"你好"}]}'`},
+];
+
+let aiFilter = 'all';
+
+function renderAi(){
+  const q = $('#aiSearch').value.trim().toLowerCase();
+  let list = AI_PROVIDERS.filter(p =>
+    (aiFilter === 'all') || (aiFilter === p.region));
+  if(q) list = list.filter(p => (p.name + p.desc + p.quota).toLowerCase().includes(q));
+  $('#aiMeta').textContent = `共 ${list.length} 家厂商`;
+  $('#aiCount').textContent = list.length;
+  $('#aiGrid').innerHTML = list.map(p => `
+    <div class="card">
+      <h3><span class="name">${esc(p.name)}</span>
+        ${p.region === 'cn' ? '<span class="tag warn">国内</span>' : '<span class="tag info">国际</span>'}
+        <span class="tag ok">免费额度</span>
+      </h3>
+      <p class="desc">${esc(p.desc)}</p>
+      <div class="meta">🎁 ${esc(p.quota)}</div>
+      <pre class="curl"><button class="copy" data-cmd="${esc(p.curl)}">复制</button>${esc(p.curl)}</pre>
+      <div class="actions"><a href="${esc(p.link)}" target="_blank" rel="noopener">↗ 领取免费额度 / 官网</a></div>
+    </div>`).join('');
+}
+$('#aiSearch').addEventListener('input', renderAi);
+$$('.chip[data-aifilter]').forEach(c => c.addEventListener('click', ()=>{
+  $$('.chip[data-aifilter]').forEach(x => x.classList.toggle('active', x===c));
+  aiFilter = c.dataset.aifilter; renderAi();
+}));
+
+/* 社区免费 LLM 清单（实时抓取 cheahjs/free-llm-api-resources） */
+async function loadFreeLlmList(){
+  const grid = $('#aiListGrid');
+  grid.innerHTML = '<div class="loader"><div class="spinner"></div>正在从 GitHub 抓取社区维护的免费 LLM 清单…</div>';
+  try{
+    let md = await fetchRepoFile('cheahjs/free-llm-api-resources', 'main', 'main.md');
+    cacheSet('far_llmlist', md);
+    const rows = md.split('\n').filter(l => /^\|.*https?:\/\//.test(l) && !/^\|\s*-/.test(l));
+    const items = rows.map(l => {
+      const cells = l.split('|').map(c => c.trim()).filter(Boolean);
+      const name = (cells[0]||'').replace(/\[([^\]]*)\]\([^)]*\)/g,'$1');
+      const link = (l.match(/\((https?:\/\/[^)\s]+)\)/) || [])[1] || '';
+      const rest = cells.slice(1).join(' · ').replace(/\[([^\]]*)\]\([^)]*\)/g,'$1');
+      return {name:esc(name), link, rest:esc(rest.slice(0,220))};
+    }).filter(x => x.link).slice(0, 40);
+    grid.innerHTML = items.length ? items.map(x => `
+      <div class="card">
+        <h3><span class="name">${x.name}</span><span class="tag">免费</span></h3>
+        <p class="desc">${x.rest}</p>
+        <div class="actions"><a href="${esc(x.link)}" target="_blank" rel="noopener">↗ 查看详情</a></div>
+      </div>`).join('') : '<div class="empty">清单暂时为空</div>';
+  }catch(e){
+    const cached = cacheGet('far_llmlist', 7*24*3600e3);
+    if(cached){
+      grid.innerHTML = '<div class="empty">在线抓取失败，可直达 <a href="https://github.com/cheahjs/free-llm-api-resources" target="_blank">cheahjs/free-llm-api-resources</a></div>';
+    }else{
+      grid.innerHTML = `<div class="empty">GitHub 数据源暂时不可达（限流/网络），可直接访问
+        <a href="https://github.com/cheahjs/free-llm-api-resources" target="_blank">cheahjs/free-llm-api-resources</a></div>`;
+    }
+  }
+}
+
+/* =====================================================================
+ * 三、GitHub 实时抓取（Search API）
+ * ===================================================================== */
+async function ghSearch(q, sort='updated', per_page=8){
+  const url = `https://api.github.com/search/repositories?q=${encodeURIComponent(q)}&sort=${sort}&order=desc&per_page=${per_page}`;
+  return (await fetchJSON(url)).items || [];
+}
+/* 搜索结果缓存：限流/断网时回退到最近一次成功结果 */
+async function ghSearchCached(q, sort, per_page){
+  const key = 'far_gh_' + q + '|' + sort;
+  try{
+    const items = await ghSearch(q, sort, per_page);
+    if(items.length) cacheSet(key, items);
+    return {items, live:true};
+  }catch(e){
+    const c = cacheGet(key, 7*24*3600e3);
+    if(c) return {items:c, live:false};
+    return {items:[], live:false, error:e};
+  }
+}
+function repoCard(r){
+  const cmd = `git clone https://github.com/${r.full_name}.git`;
+  return `
+  <div class="card">
+    <h3><img src="${r.owner.avatar_url}" width="20" height="20" style="border-radius:5px" alt="">
+        <a href="${r.html_url}" target="_blank" rel="noopener">${esc(r.full_name)}</a>
+        <span class="tag ok">★ ${r.stargazers_count}</span></h3>
+    <p class="desc">${esc(r.description || '（无描述）')}</p>
+    <div class="meta"><span>⏱ ${timeAgo(r.pushed_at)}有更新</span>${r.language ? `<span>💻 ${esc(r.language)}</span>`:''}</div>
+    <pre class="curl"><button class="copy" data-cmd="${esc(cmd)}">复制</button>${esc(cmd)}</pre>
+    <div class="actions"><a href="${r.html_url}" target="_blank" rel="noopener">↗ 打开仓库</a></div>
+  </div>`;
+}
+async function loadGithub(){
+  const g1 = $('#ghRecentGrid'), g2 = $('#ghStarGrid');
+  g1.innerHTML = '<div class="loader"><div class="spinner"></div>正在实时抓取 GitHub…</div>';
+  g2.innerHTML = '';
+  const tasks = [
+    ghSearchCached('free api', 'updated', 8).then(r => {
+      g1.innerHTML = r.items.length ? r.items.map(repoCard).join('')
+        : '<div class="empty">无结果（可能触发了 GitHub API 限流，稍后自动恢复）</div>';
+      $('#ghCount').textContent = r.items.length;
+      return r;
+    }),
+    ghSearchCached('free llm OR free ai api OR 免费大模型', 'stars', 8).then(r => {
+      g2.innerHTML = r.items.length ? r.items.map(repoCard).join('') : '<div class="empty">无结果</div>';
+      return r;
+    }),
+  ];
+  const results = await Promise.allSettled(tasks);
+  const allDead = results.every(r => r.status === 'fulfilled' && r.value.live === false);
+  if(allDead)
+    banner('⚠ GitHub Search API 限流或网络受限，当前展示最近一次成功抓取的缓存数据（点击「立即抓取」重试）。', true);
+}
+
+/* =====================================================================
+ * 四、定时刷新调度
+ * ===================================================================== */
+let refreshTimer = null, tickTimer = null, nextAt = 0;
+
+async function refreshAll(manual){
+  const btn = $('#refreshBtn');
+  btn.disabled = true; btn.textContent = '⏳ 抓取中…';
+  $('#updated').innerHTML = '正在抓取…';
+  try{
+    await Promise.allSettled([loadPublicApis(), loadGithub(), loadFreeLlmList()]);
+    $('#updated').innerHTML = `<b>已更新</b> ${new Date().toLocaleTimeString('zh-CN')}`;
+    if(manual) toast('全网抓取完成 ✔');
+  }finally{
+    btn.disabled = false; btn.textContent = '⟳ 立即抓取';
+    schedule();
+  }
+}
+
+function schedule(){
+  clearInterval(refreshTimer); clearInterval(tickTimer);
+  const min = +$('#intervalSel').value;
+  localStorage.setItem('far_interval', min);
+  if(min > 0){
+    nextAt = Date.now() + min*60*1000;
+    refreshTimer = setInterval(()=>refreshAll(false), min*60*1000);
+    tickTimer = setInterval(()=>{
+      const left = nextAt - Date.now();
+      if(left <= 0){ $('#countdown').textContent = ''; return; }
+      const m = left/60000|0, s = (left%60000)/1000|0;
+      $('#countdown').textContent = `⏳ ${m}:${String(s).padStart(2,'0')} 后自动重抓`;
+    }, 1000);
+  }else $('#countdown').textContent = '';
+}
+
+$('#intervalSel').value = localStorage.getItem('far_interval') || '10';
+$('#intervalSel').addEventListener('change', schedule);
+$('#refreshBtn').addEventListener('click', ()=>refreshAll(true));
+
+renderAi();          // 内置情报立即渲染
+refreshAll(false);   // 首次抓取
+</script>
+</body>
+</html>
